@@ -41,20 +41,18 @@ struct AddPlayerEvent {
 struct GameEvent {
     using Function = std::function<Result(Game&)>;
 
-    GameEvent(std::string description, Function apply_function)
-        : description_{std::move(description)}, function_{std::move(apply_function)}
+    GameEvent(Function apply_function)
+        : function_{std::move(apply_function)}
     {}
 
     const Function& function() const { return function_; }
-
-    const std::string& description() const { return description_; }
 private:
-    std::string description_ = "An event";
     Function function_ = [](Game&) -> Result { return true; };
 };
 
 struct Event {
-    using Data = std::variant<MessageEvent, NotificationEvent, GameEvent, AddPlayerEvent, UndoEvent, RedoEvent>;
+    using Data = std::variant<MessageEvent, NotificationEvent, GameEvent,
+                              AddPlayerEvent, UndoEvent, RedoEvent>;
     enum class Type {
         message, notification, game, add_player, undo, redo
     };
@@ -85,10 +83,10 @@ struct Event {
     std::string description() const {
         struct {
             std::string operator()(const UndoEvent&) {
-                return "Undo";
+                return "Undo event";
             }
             std::string operator()(const RedoEvent&) {
-                return "Redo";
+                return "Redo event";
             }
             std::string operator()(const MessageEvent& e) {
                 return "Message: " + e.text;
@@ -96,8 +94,8 @@ struct Event {
             std::string operator()(const NotificationEvent& e) {
                 return "Notification: " + e.text;
             }
-            std::string operator()(const GameEvent& e) {
-                return "Game event: " + e.description();
+            std::string operator()(const GameEvent&) {
+                return "Game event";
             }
             std::string operator()(const AddPlayerEvent& e) {
                 return "Add player: " + e.name;

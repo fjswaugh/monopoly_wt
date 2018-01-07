@@ -73,7 +73,7 @@ struct Property {
     std::array<int, 6> rents;
 
     int houses = 0;
-    Player* owner = nullptr;
+    std::optional<unsigned> owner_id = {};
 private:
     bool mortgaged_ = false;
     int mortgage_amount_ = 0;
@@ -243,20 +243,20 @@ int max_unsecured_debt(const Player&, const Game&) noexcept;
 // Checking functions ---------------------------------------------------------
 
 struct Result {
-    Result(bool result, std::string error_message = "")
-        : result_{result}, error_message_{error_message}
+    Result(bool result, std::string description = "")
+        : result_{result}, description_{description}
     {}
 
     constexpr operator bool() const noexcept {
         return result_;
     }
 
-    const std::string& error_message() const noexcept {
-        return error_message_;
+    const std::string& description() const noexcept {
+        return description_;
     }
 private:
     bool result_;
-    std::string error_message_;
+    std::string description_;
 };
 
 // Major functions ------------------------------------------------------------

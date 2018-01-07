@@ -13,12 +13,13 @@ const PropertySet PropertySet::utility = 0b1100000000000000000000000000;
 
 // Information functions ------------------------------------------------------
 
-int expected_rent(const Property& p) noexcept {
+int expected_rent(const Property& p, const Game& g) noexcept {
     if (p.mortgaged()) return 0;
 
-    const unsigned number_owned_in_set = [&p]() -> unsigned {
-        if (p.owner) {
-            return (p.owner->properties & p.set).count();
+    const unsigned number_owned_in_set = [&p, &g]() -> unsigned {
+        if (p.owner_id) {
+            const auto& owner = g.player(*p.owner_id);
+            return (owner.properties & p.set).count();
         }
         return 0;
     }();
@@ -57,7 +58,7 @@ int expected_income(const Player& player, const Game& game) noexcept
     int sum = 0;
     for (int i = 0; i < 28; ++i) {
         if (player.properties[i]) {
-            sum += expected_rent(game.properties[i]);
+            sum += expected_rent(game.properties[i], game);
         }
     }
     return sum;
@@ -80,7 +81,7 @@ int max_unsecured_debt(const Player&, const Game&) noexcept {
 // Checking functions ---------------------------------------------------------
 
 #define CHECK_PLAYER_OWNS_PROPERTY(player_id, property_id)\
-    if (game.properties[property_id].owner != &game.player(player_id)) {\
+    if (game.properties[property_id].owner_id != player_id) {\
         return {false, "Property is not owned by player_id"};\
     }\
 \
@@ -125,7 +126,7 @@ Result can_buy_property(const Game& game, unsigned player_id, unsigned property_
     CHECK_PROPERTY_ID_IN_RANGE(property_id);
     assert(price >= 0);
 
-    if (game.properties[property_id].owner) {
+    if (game.properties[property_id].owner_id) {
         return {false, "Property not available"};
     }
 
@@ -402,7 +403,7 @@ Result buy_property(Game& game, unsigned player_id, unsigned property_id, int pr
     const auto result = can_buy_property(game, player_id, property_id, price);
     if (!result) return result;
 
-    game.properties[property_id].owner = &game.player(player_id);
+    game.properties[property_id].owner_id = player_id;
     game.player(player_id).properties[property_id] = true;
 
     game.player(player_id).cash -= price;
@@ -417,7 +418,7 @@ Result sell_property(Game& game, unsigned player_id, unsigned property_id)
     const auto result = can_sell_property(game, player_id, property_id);
     if (!result) return result;
 
-    game.properties[property_id].owner = nullptr;
+    game.properties[property_id].owner_id = {};
     game.player(player_id).properties[property_id] = false;
 
     const int price = game.ppi * game.properties[property_id].guide_price;
@@ -565,7 +566,9 @@ Result transfer(Game& game, unsigned from_player_id, unsigned to_player_id, int 
     from_player.properties ^= properties;
     to_player.properties ^= properties;
 
-    for_each_property(properties, game, [&to_player](Property& p) { p.owner = &to_player; });
+    for_each_property(properties, game, [to_player_id](Property& p) {
+        p.owner_id = to_player_id;
+    });
 
     return true;
 }

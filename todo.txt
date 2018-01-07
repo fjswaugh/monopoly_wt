@@ -6,6 +6,3 @@ Make rules file and update with bankruptcy rules
 Allow the banker to add players to the game
 Change property type so that it stores an owner index rather than a pointer to its owner
 Make sizeof(Game) smaller by storing all constant information about properties somewhere else
-
-Description of events should NOT happen in the event object, but should be returned in the Result object.
-That way a better description can be formulated, and then pushed as a notification event.

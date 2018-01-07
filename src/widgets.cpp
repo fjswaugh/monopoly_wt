@@ -15,28 +15,30 @@ namespace {
 
 void attempt_to_send(const UndoEvent& event, GameServer& server, Wt::WContainerWidget* widget)
 {
-    const bool r = server.undo();
+    const Result r = server.undo();
 
     if (r) {
         server.post(Event{event});
+        server.post(Event{NotificationEvent{r.description()}});
     } else {
         if (widget) {
             auto* popup = widget->addChild(
-                std::make_unique<Popup>(Popup::Alert, "Error: cannot undo", ""));
+                std::make_unique<Popup>(Popup::Alert, r.description(), ""));
             popup->show.exec();
         }
     }
 }
 void attempt_to_send(const RedoEvent& event, GameServer& server, Wt::WContainerWidget* widget)
 {
-    const bool r = server.redo();
+    const Result r = server.redo();
 
     if (r) {
         server.post(Event{event});
+        server.post(Event{NotificationEvent{r.description()}});
     } else {
         if (widget) {
             auto* popup = widget->addChild(
-                std::make_unique<Popup>(Popup::Alert, "Error: cannot redo", ""));
+                std::make_unique<Popup>(Popup::Alert, r.description(), ""));
             popup->show.exec();
         }
     }
@@ -48,10 +50,11 @@ void attempt_to_send(const GameEvent& event, GameServer& server, Wt::WContainerW
 
     if (r) {
         server.post(Event{event});
+        server.post(Event{NotificationEvent{r.description()}});
     } else {
         if (widget) {
             auto* popup = widget->addChild(
-                std::make_unique<Popup>(Popup::Alert, "Error: " + r.error_message(), ""));
+                std::make_unique<Popup>(Popup::Alert, "Error: " + r.description(), ""));
             popup->show.exec();
         }
     }
@@ -223,10 +226,8 @@ PlayerWidget::PlayerWidget(GameServer& server, unsigned player_id)
             const auto function = [=](Game& g) {
                 return buy_property(g, player_id_, property_id, amount);
             };
-            const auto message = player.name + " bought " + game.properties[property_id].name +
-                                 " at a price of £" + std::to_string(amount);
 
-            const GameEvent event{message, function};
+            const GameEvent event{function};
             attempt_to_send(event, server_, this);
         };
         buy_button_->mouseWentDown().connect(buy_function);
@@ -250,10 +251,8 @@ PlayerWidget::PlayerWidget(GameServer& server, unsigned player_id)
                 const auto function = [=](Game& g) {
                     return sell_property(g, player_id_, property_id);
                 };
-                const auto message = server_.game().player(player_id_).name + " sold " +
-                                     server_.game().properties[property_id].name + " to the bank";
 
-                const GameEvent event{message, function};
+                const GameEvent event{function};
                 attempt_to_send(event, server_, this);
             }
         };
@@ -270,10 +269,8 @@ PlayerWidget::PlayerWidget(GameServer& server, unsigned player_id)
                 const auto function = [=](Game& g) {
                     return mortgage(g, player_id_, property_id);
                 };
-                const auto message = server_.game().player(player_id_).name + " mortgaged " +
-                                     server_.game().properties[property_id].name;
 
-                const GameEvent event{message, function};
+                const GameEvent event{function};
                 attempt_to_send(event, server_, this);
             }
         };
@@ -290,10 +287,8 @@ PlayerWidget::PlayerWidget(GameServer& server, unsigned player_id)
                 const auto function = [=](Game& g) {
                     return unmortgage(g, player_id_, property_id);
                 };
-                const auto message = server_.game().player(player_id_).name + " unmortgaged " +
-                                     server_.game().properties[property_id].name;
 
-                const GameEvent event{message, function};
+                const GameEvent event{function};
                 attempt_to_send(event, server_, this);
             }
         };
@@ -325,11 +320,8 @@ PlayerWidget::PlayerWidget(GameServer& server, unsigned player_id)
             const auto function = [=](Game& g) {
                 return transfer(g, from_player_id, to_player_id, amount, properties);
             };
-            const auto message = server_.game().player(from_player_id).name +
-                                 " made a transfer to " +
-                                 server_.game().player(to_player_id).name;
 
-            const GameEvent event{message, function};
+            const GameEvent event{function};
             attempt_to_send(event, server_, this);
         };
         amount_to_transfer_->enterPressed().connect(transfer_function);
@@ -347,10 +339,8 @@ PlayerWidget::PlayerWidget(GameServer& server, unsigned player_id)
             if (!is_positive_int(amount_str)) return;
 
             const int amount = std::stoi(amount_str);
-            const auto& player = server_.game().player(player_id_);
 
-            const GameEvent event{player.name + " payed " + amount_str + " to the bank",
-                                  [=](Game& g) { return pay_to_bank(g, player_id_, amount); }};
+            const GameEvent event{[=](Game& g) { return pay_to_bank(g, player_id_, amount); }};
             attempt_to_send(event, server_, this);
             amount_to_pay_->setText("");
         };
@@ -389,11 +379,9 @@ PlayerWidget::PlayerWidget(GameServer& server, unsigned player_id)
             const auto unsecured_function = [=](Game& g) {
                 return take_out_unsecured_debt(g, player_id_, amount);
             };
-            const auto message = server_.game().player(player_id_).name + " took out £" +
-                                 amount_str + " of " + (secured ? "" : "un") + "secured debt";
 
-            const GameEvent event = secured ? GameEvent{message, secured_function}
-                                            : GameEvent{message, unsecured_function};
+            const GameEvent event = secured ? GameEvent{secured_function}
+                                            : GameEvent{unsecured_function};
             attempt_to_send(event, server_, this);
         };
 
@@ -426,11 +414,9 @@ PlayerWidget::PlayerWidget(GameServer& server, unsigned player_id)
             const auto unsecured_function = [=](Game& g) {
                 return pay_off_unsecured_debt(g, player_id_, amount);
             };
-            const auto message = server_.game().player(player_id_).name + " payed off £" +
-                                 amount_str + " of " + (secured ? "" : "un") + "secured debt";
 
-            const GameEvent event = secured ? GameEvent{message, secured_function}
-                                            : GameEvent{message, unsecured_function};
+            const GameEvent event = secured ? GameEvent{secured_function}
+                                            : GameEvent{unsecured_function};
             attempt_to_send(event, server_, this);
         };
 
@@ -444,10 +430,7 @@ PlayerWidget::PlayerWidget(GameServer& server, unsigned player_id)
             std::make_unique<Wt::WPushButton>("Pass go (collect salary and pay interest)"));
 
         const auto pass_go_function = [this] {
-            const auto& game = server_.game();
-            const auto& player = game.player(player_id_);
-            const GameEvent event{player.name + " passed go",
-                                  [=](Game& g) { return passgo(g, player_id_); }};
+            const GameEvent event{[=](Game& g) { return passgo(g, player_id_); }};
             attempt_to_send(event, server_, this);
         };
         pass_go_->mouseWentDown().connect(pass_go_function);
@@ -458,14 +441,10 @@ PlayerWidget::PlayerWidget(GameServer& server, unsigned player_id)
 
 void PlayerWidget::update()
 {
-    const auto& game = server_.game();
-    const auto& player = game.player(player_id_);
-
     // Property selector/display
     const auto& all_properties = server_.game().properties;
-    const auto* const player_ptr = &player;
     for (unsigned i = 0; i < 28; ++i) {
-        if (all_properties[i].owner == player_ptr) {
+        if (all_properties[i].owner_id == player_id_) {
             properties_[i]->setHidden(false);
         } else {
             // Make sure the box is unchecked before hiding it
@@ -477,7 +456,7 @@ void PlayerWidget::update()
     // Buy property
     buy_combobox_->clear();
     for (const auto& property : server_.game().properties) {
-        if (property.owner == nullptr) buy_combobox_->addItem(property.name);
+        if (!property.owner_id) buy_combobox_->addItem(property.name);
     }
 
     // Players combobox
@@ -498,11 +477,11 @@ BankerWidget::BankerWidget(GameServer& server)
         std::make_unique<Wt::WPushButton>("Decrease interest rates"));
 
     increase_rates_->mouseWentDown().connect([this] {
-        const GameEvent event{"Interest rates increased", raise_interest};
+        const GameEvent event{raise_interest};
         attempt_to_send(event, server_, this);
     });
     decrease_rates_->mouseWentDown().connect([this] {
-        const GameEvent event{"Interest rates decreased", lower_interest};
+        const GameEvent event{lower_interest};
         attempt_to_send(event, server_, this);
     });
 
@@ -553,49 +532,32 @@ void GameWidget::handle_event(const Event& event)
 {
     switch (event.type()) {
     case Event::Type::undo:
-        if (message_widget_) message_widget_->push("Undo");
         if (info_widget_) info_widget_->update();
         if (player_widget_) player_widget_->update();
         if (banker_widget_) banker_widget_->update();
         break;
     case Event::Type::redo:
-        if (message_widget_) message_widget_->push("Redo");
         if (info_widget_) info_widget_->update();
         if (player_widget_) player_widget_->update();
         if (banker_widget_) banker_widget_->update();
         break;
     case Event::Type::message:
-        if (message_widget_) {
-            message_widget_->push(event.get<MessageEvent>().text);
-        }
+        if (message_widget_) message_widget_->push(event.get<MessageEvent>().text);
         break;
     case Event::Type::notification:
-        if (message_widget_) {
-            message_widget_->push(event.get<NotificationEvent>().text);
-        }
+        if (message_widget_) message_widget_->push(event.get<NotificationEvent>().text);
         break;
     case Event::Type::game:
-        if (message_widget_) {
-            message_widget_->push(event.get<GameEvent>().description());
-        }
-        if (info_widget_) {
-            info_widget_->update();
-        }
-        if (player_widget_) {
-            player_widget_->update();
-        }
-        if (banker_widget_) {
-            banker_widget_->update();
-        }
+        if (info_widget_) info_widget_->update();
+        if (player_widget_) player_widget_->update();
+        if (banker_widget_) banker_widget_->update();
         break;
     case Event::Type::add_player:
         if (info_widget_) {
             info_widget_->add_player(event.get<AddPlayerEvent>().player_id);
             info_widget_->update();
         }
-        if (player_widget_) {
-            player_widget_->update();
-        }
+        if (player_widget_) player_widget_->update();
         break;
     }
 
