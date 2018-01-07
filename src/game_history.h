@@ -2,6 +2,7 @@
 
 #include "game.h"
 #include "event.h"
+#include <iostream>
 #include <vector>
 #include <cassert>
 
@@ -24,14 +25,13 @@ struct GameHistory {
         return history_[current_game_index_];
     }
 
+    // Adding a player resets the undo/redo for now
     void add_player(const AddPlayerEvent& event) {
         assert(event.player_id == this->current_game().num_players());
 
-        const unsigned new_game_index = (current_game_index_ + 1) % games_stored;
-        history_[new_game_index] = history_[current_game_index_];
-        history_[new_game_index].add_player(event.name);
+        history_[current_game_index_].add_player(event.name);
 
-        past_games_ = std::min(past_games_ + 1, games_stored - 1);
+        past_games_ = 0;
         future_games_ = 0;
     }
 
@@ -55,6 +55,7 @@ struct GameHistory {
         current_game_index_ = (current_game_index_ > 0 ? current_game_index_ - 1 : games_stored - 1);
         --past_games_;
         ++future_games_;
+        return true;
     }
 
     bool redo() noexcept {
@@ -62,6 +63,7 @@ struct GameHistory {
         current_game_index_ = (current_game_index_ + 1) % games_stored;
         ++past_games_;
         --future_games_;
+        return true;
     }
 private:
     static const unsigned games_stored = 100;

@@ -13,6 +13,35 @@ using namespace std::literals;
 
 namespace {
 
+void attempt_to_send(const UndoEvent& event, GameServer& server, Wt::WContainerWidget* widget)
+{
+    const bool r = server.undo();
+
+    if (r) {
+        server.post(Event{event});
+    } else {
+        if (widget) {
+            auto* popup = widget->addChild(
+                std::make_unique<Popup>(Popup::Alert, "Error: cannot undo", ""));
+            popup->show.exec();
+        }
+    }
+}
+void attempt_to_send(const RedoEvent& event, GameServer& server, Wt::WContainerWidget* widget)
+{
+    const bool r = server.redo();
+
+    if (r) {
+        server.post(Event{event});
+    } else {
+        if (widget) {
+            auto* popup = widget->addChild(
+                std::make_unique<Popup>(Popup::Alert, "Error: cannot redo", ""));
+            popup->show.exec();
+        }
+    }
+}
+
 void attempt_to_send(const GameEvent& event, GameServer& server, Wt::WContainerWidget* widget)
 {
     const Result r = server.apply(event);
@@ -476,6 +505,14 @@ BankerWidget::BankerWidget(GameServer& server)
         const GameEvent event{"Interest rates decreased", lower_interest};
         attempt_to_send(event, server_, this);
     });
+
+    undo_ = this->addWidget(std::make_unique<Wt::WPushButton>("Undo"));
+    redo_ = this->addWidget(std::make_unique<Wt::WPushButton>("Redo"));
+
+    undo_->mouseWentDown().connect(
+        [this] { attempt_to_send(UndoEvent{}, server_, this); });
+    redo_->mouseWentDown().connect(
+        [this] { attempt_to_send(RedoEvent{}, server_, this); });
 }
 
 void BankerWidget::update()
@@ -515,6 +552,18 @@ GameWidget::GameWidget(GameServer& server, Type type, unsigned player_id)
 void GameWidget::handle_event(const Event& event)
 {
     switch (event.type()) {
+    case Event::Type::undo:
+        if (message_widget_) message_widget_->push("Undo");
+        if (info_widget_) info_widget_->update();
+        if (player_widget_) player_widget_->update();
+        if (banker_widget_) banker_widget_->update();
+        break;
+    case Event::Type::redo:
+        if (message_widget_) message_widget_->push("Redo");
+        if (info_widget_) info_widget_->update();
+        if (player_widget_) player_widget_->update();
+        if (banker_widget_) banker_widget_->update();
+        break;
     case Event::Type::message:
         if (message_widget_) {
             message_widget_->push(event.get<MessageEvent>().text);

@@ -140,6 +140,9 @@ private:
     //     End the game and destroy the GameServer, ideally taking everyone back to the login page
     Wt::WPushButton* increase_rates_ = nullptr;
     Wt::WPushButton* decrease_rates_ = nullptr;
+
+    Wt::WPushButton* undo_ = nullptr;
+    Wt::WPushButton* redo_ = nullptr;
 };
 
 struct GameWidget : Wt::WContainerWidget {

@@ -38,6 +38,9 @@ struct GameServer {
 
     void add_player(const AddPlayerEvent&);
     Result apply(const GameEvent&);
+    bool undo() { return game_history_.undo(); }
+    bool redo() { return game_history_.redo(); }
+
     void post(const Event&);
 
     const Game& game() const {

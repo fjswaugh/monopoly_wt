@@ -7,6 +7,12 @@
 
 #include "game.h"
 
+struct UndoEvent {
+};
+
+struct RedoEvent {
+};
+
 struct MessageEvent {
     MessageEvent(std::string text, std::string sender_name)
         : text{sender_name + ": " + text}
@@ -48,9 +54,9 @@ private:
 };
 
 struct Event {
-    using Data = std::variant<MessageEvent, NotificationEvent, GameEvent, AddPlayerEvent>;
+    using Data = std::variant<MessageEvent, NotificationEvent, GameEvent, AddPlayerEvent, UndoEvent, RedoEvent>;
     enum class Type {
-        message, notification, game, add_player
+        message, notification, game, add_player, undo, redo
     };
 
     Event(Data&& data)
@@ -78,6 +84,12 @@ struct Event {
     // Generates a higher level description of an event, useful for logging
     std::string description() const {
         struct {
+            std::string operator()(const UndoEvent&) {
+                return "Undo";
+            }
+            std::string operator()(const RedoEvent&) {
+                return "Redo";
+            }
             std::string operator()(const MessageEvent& e) {
                 return "Message: " + e.text;
             }
