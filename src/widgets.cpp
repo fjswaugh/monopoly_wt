@@ -302,12 +302,10 @@ PlayerWidget::PlayerWidget(GameServer& server, unsigned player_id)
         players_combobox_ = this->addWidget(std::make_unique<Wt::WComboBox>());
         transfer_to_player_ = this->addWidget(std::make_unique<Wt::WPushButton>("Transfer"));
         const auto transfer_function = [this] {
-            const std::string amount_str = amount_to_transfer_->text().narrow();
-            if (!is_positive_int(amount_str)) return;
-
             const unsigned from_player_id = player_id_;
             const unsigned to_player_id = players_combobox_->currentIndex();
-            const int amount = std::stoi(amount_str);
+            const int amount = get_positive_int(amount_to_transfer_);
+            if (amount < 0) return;
             amount_to_transfer_->setText("");
             const PropertySet properties = [this]() {
                 PropertySet set;
@@ -330,15 +328,69 @@ PlayerWidget::PlayerWidget(GameServer& server, unsigned player_id)
 
     this->addWidget(std::make_unique<Wt::WBreak>());
 
+    {
+        number_of_houses_buy_ = this->addWidget(std::make_unique<Wt::WLineEdit>());
+        buy_houses_button_ = this->addWidget(std::make_unique<Wt::WPushButton>("Buy houses"));
+        number_of_houses_sell_ = this->addWidget(std::make_unique<Wt::WLineEdit>());
+        sell_houses_button_ = this->addWidget(std::make_unique<Wt::WPushButton>("Sell houses"));
+
+        const auto buy_houses_function = [this] {
+            const int number = get_positive_int(number_of_houses_buy_);
+            if (number < 0) return;
+            number_of_houses_buy_->setText("");
+
+            const PropertySet properties = [this]() {
+                PropertySet set;
+                for (unsigned property_id = 0; property_id < 28; ++property_id) {
+                    set[property_id] = properties_[property_id]->checked();
+                }
+                return set;
+            }();
+
+            const auto function = [=](Game& g) {
+                return build_houses(g, player_id_, properties, number);
+            };
+
+            const GameEvent event{function};
+            attempt_to_send(event, server_, this);
+        };
+
+        const auto sell_houses_function = [this] {
+            const int number = get_positive_int(number_of_houses_sell_);
+            if (number < 0) return;
+            number_of_houses_sell_->setText("");
+
+            const PropertySet properties = [this]() {
+                PropertySet set;
+                for (unsigned property_id = 0; property_id < 28; ++property_id) {
+                    set[property_id] = properties_[property_id]->checked();
+                }
+                return set;
+            }();
+
+            const auto function = [=](Game& g) {
+                return sell_houses(g, player_id_, properties, number);
+            };
+
+            const GameEvent event{function};
+            attempt_to_send(event, server_, this);
+        };
+
+        number_of_houses_buy_->enterPressed().connect(buy_houses_function);
+        buy_houses_button_->mouseWentDown().connect(buy_houses_function);
+        number_of_houses_sell_->enterPressed().connect(sell_houses_function);
+        sell_houses_button_->mouseWentDown().connect(sell_houses_function);
+    }
+
+    this->addWidget(std::make_unique<Wt::WBreak>());
+
     { // Pay to bank
         amount_to_pay_ = this->addWidget(std::make_unique<Wt::WLineEdit>());
         pay_to_bank_ = this->addWidget(std::make_unique<Wt::WPushButton>("Pay to bank"));
 
         const auto pay_to_bank_function = [this] {
-            const std::string amount_str = amount_to_pay_->text().narrow();
-            if (!is_positive_int(amount_str)) return;
-
-            const int amount = std::stoi(amount_str);
+            const int amount = get_positive_int(amount_to_receive_);
+            if (amount < 0) return;
 
             const GameEvent event{[=](Game& g) { return pay_to_bank(g, player_id_, amount); }};
             attempt_to_send(event, server_, this);
@@ -347,6 +399,23 @@ PlayerWidget::PlayerWidget(GameServer& server, unsigned player_id)
 
         pay_to_bank_->mouseWentDown().connect(pay_to_bank_function);
         amount_to_pay_->enterPressed().connect(pay_to_bank_function);
+    }
+
+    { // Receive from bank
+        amount_to_receive_ = this->addWidget(std::make_unique<Wt::WLineEdit>());
+        receive_from_bank_ = this->addWidget(std::make_unique<Wt::WPushButton>("Take from bank"));
+
+        const auto take_from_bank_function = [this] {
+            const int amount = get_positive_int(amount_to_receive_);
+            if (amount < 0) return;
+
+            const GameEvent event{[=](Game& g) { return pay_to_player(g, player_id_, amount); }};
+            attempt_to_send(event, server_, this);
+            amount_to_receive_->setText("");
+        };
+
+        receive_from_bank_->mouseWentDown().connect(take_from_bank_function);
+        amount_to_receive_->enterPressed().connect(take_from_bank_function);
     }
 
     this->addWidget(std::make_unique<Wt::WBreak>());

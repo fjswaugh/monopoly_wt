@@ -100,11 +100,17 @@ private:
     Wt::WComboBox* players_combobox_ = nullptr;
     Wt::WPushButton* transfer_to_player_ = nullptr;
 
-    // Build and sell houses
+    Wt::WLineEdit* number_of_houses_buy_ = nullptr;
+    Wt::WLineEdit* number_of_houses_sell_ = nullptr;
+    Wt::WPushButton* buy_houses_button_ = nullptr;
+    Wt::WPushButton* sell_houses_button_ = nullptr;
     // Pay repairs
 
     Wt::WLineEdit* amount_to_pay_ = nullptr;
     Wt::WPushButton* pay_to_bank_ = nullptr;
+
+    Wt::WLineEdit* amount_to_receive_ = nullptr;
+    Wt::WPushButton* receive_from_bank_ = nullptr;
 
     Wt::WLineEdit* take_out_amount_ = nullptr;
     std::shared_ptr<Wt::WButtonGroup> take_out_type_ = nullptr;

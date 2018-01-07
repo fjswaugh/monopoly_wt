@@ -181,13 +181,19 @@ Result can_build_houses(const Game& game, unsigned player_id, PropertySet set, i
     CHECK_PLAYER_ID_IN_RANGE(player_id);
     assert(number >= 0);
 
-    if (set == PropertySet::station) {
+    if ((set | PropertySet::station) != 0) {
         return {false, "Can't build on stations"};
     }
 
-    if (set == PropertySet::utility) {
+    if ((set | PropertySet::utility) != 0) {
         return {false, "Can't build on utilities"};
     }
+
+    /*
+    if (!in_same_set(set)) {
+        return {false, "Properties must be in the same set"};
+    }
+    */
 
     if ((game.player(player_id).properties & set) != set) {
         return {false, game.player(player_id).name + " doesn't own all properties in set"};
@@ -212,6 +218,12 @@ Result can_sell_houses(const Game& game, unsigned player_id, PropertySet set, in
 {
     CHECK_PLAYER_ID_IN_RANGE(player_id);
     assert(number >= 0);
+
+    /*
+    if (!in_same_set(set)) {
+        return {false, "Properties must be in the same set"};
+    }
+    */
 
     if ((game.player(player_id).properties & set) != set) {
         return {false, game.player(player_id).name + " doesn't own all properties in set"};
