@@ -11,6 +11,7 @@
 #include <optional>
 
 #include "game.h"
+#include "game_history.h"
 
 struct GameWidget;
 struct Event;
@@ -40,14 +41,14 @@ struct GameServer {
     void post(const Event&);
 
     const Game& game() const {
-        return game_;
+        return game_history_.current_game();
     }
 private:
     struct ClientInfo {
         std::string session_id;
     };
 
-    Game game_;
+    GameHistory game_history_;
 
     Wt::WServer& wserver_;
     std::string name_;

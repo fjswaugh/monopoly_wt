@@ -35,12 +35,12 @@ std::optional<unsigned> GameServer::login(std::string username)
     std::unique_lock<std::recursive_mutex> lock(mutex_);
 
     const auto it
-        = std::find_if(game_.players().begin(), game_.players().end(),
+        = std::find_if(this->game().players().begin(), this->game().players().end(),
                        [&username](auto& x) { return x.name == username; });
 
-    const unsigned player_id = std::distance(game_.players().begin(), it);
-    if (it == game_.players().end()) {
-        AddPlayerEvent e(username, game_.players().size());
+    const unsigned player_id = std::distance(this->game().players().begin(), it);
+    if (it == this->game().players().end()) {
+        AddPlayerEvent e(username, this->game().players().size());
         this->add_player(e);
         this->post(Event{e});
     }
@@ -71,16 +71,13 @@ void GameServer::logout(unsigned player_id)
 void GameServer::add_player(const AddPlayerEvent& event)
 {
     std::unique_lock<std::recursive_mutex> lock(mutex_);
-
-    assert(event.player_id == game_.num_players());
-    game_.add_player(event.name);
+    game_history_.add_player(event);
 }
 
 Result GameServer::apply(const GameEvent& event)
 {
     std::unique_lock<std::recursive_mutex> lock(mutex_);
-
-    return event.function()(game_);
+    return game_history_.apply(event);
 }
 
 void GameServer::post(const Event& event)
