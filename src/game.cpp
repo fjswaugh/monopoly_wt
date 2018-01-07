@@ -374,7 +374,7 @@ Result raise_interest(Game& game)
 
     game.raise_interest();
 
-    return true;
+    return {true, "Interest rates raised"};
 }
 
 Result lower_interest(Game& game)
@@ -384,7 +384,7 @@ Result lower_interest(Game& game)
 
     game.lower_interest();
 
-    return true;
+    return {true, "Interest rates lowered"};
 }
 
 Result passgo(Game& game, unsigned player_id)
@@ -392,10 +392,13 @@ Result passgo(Game& game, unsigned player_id)
     const auto result = can_passgo(game, player_id);
     if (!result) return result;
 
-    game.player(player_id).cash += game.player(player_id).salary;
-    game.player(player_id).cash -= interest_to_pay(game.player(player_id), game);
+    const int net_gain = game.player(player_id).salary
+                         - interest_to_pay(game.player(player_id), game);
+    game.player(player_id).cash += net_gain;
 
-    return true;
+    return {true,
+            game.player(player_id).name + " passed go, netting £"
+                + std::to_string(net_gain)};
 }
 
 Result buy_property(Game& game, unsigned player_id, unsigned property_id, int price)
@@ -410,7 +413,10 @@ Result buy_property(Game& game, unsigned player_id, unsigned property_id, int pr
 
     game.ppi = update_ppi(game.ppi, price, game.properties[property_id].guide_price);
 
-    return true;
+    return {true,
+            game.player(player_id).name + " bought "
+                + game.properties[property_id].name + " for £"
+                + std::to_string(price)};
 }
 
 Result sell_property(Game& game, unsigned player_id, unsigned property_id)
@@ -424,7 +430,10 @@ Result sell_property(Game& game, unsigned player_id, unsigned property_id)
     const int price = game.ppi * game.properties[property_id].guide_price;
     game.player(player_id).cash += price;
 
-    return true;
+    return {true,
+            game.player(player_id).name + " sold "
+                + game.properties[property_id].name + " to the bank for £"
+                + std::to_string(price)};
 }
 
 Result mortgage(Game& game, unsigned player_id, unsigned property_id)
@@ -439,7 +448,10 @@ Result mortgage(Game& game, unsigned player_id, unsigned property_id)
     property.mortgage(amount);
     player.cash += amount;
 
-    return true;
+    return {true,
+            game.player(player_id).name + " mortgaged "
+                + game.properties[property_id].name + " for £"
+                + std::to_string(amount)};
 }
 
 Result unmortgage(Game& game, unsigned player_id, unsigned property_id)
@@ -450,10 +462,14 @@ Result unmortgage(Game& game, unsigned player_id, unsigned property_id)
     auto& player = game.player(player_id);
     auto& property = game.properties[property_id];
 
-    player.cash -= property.mortgage_amount() * 1.1;
+    const int price = property.mortgage_amount() * 1.1;
+    player.cash -= price;
     property.unmortgage();
 
-    return true;
+    return {true,
+            game.player(player_id).name + " unmortgaged "
+                + game.properties[property_id].name + " for £"
+                + std::to_string(price)};
 }
 
 Result build_houses(Game& game, unsigned player_id, PropertySet set, int number)
@@ -482,7 +498,14 @@ Result build_houses(Game& game, unsigned player_id, PropertySet set, int number)
         i = (i + 1) % ids.size();
     }
 
-    return true;
+    std::string description = game.player(player_id).name + " built "
+                              + std::to_string(number) + "house"
+                              + (number == 1 ? "" : "s") + " on ";
+    for (const unsigned id : ids) description += game.properties[id].name + ", ";
+    description.pop_back();
+    description.pop_back();
+
+    return {true, std::move(description)};
 }
 
 Result sell_houses(Game& game, unsigned player_id, PropertySet set, int number)
@@ -509,7 +532,14 @@ Result sell_houses(Game& game, unsigned player_id, PropertySet set, int number)
         i = (i + 1) % ids.size();
     }
 
-    return true;
+    std::string description = game.player(player_id).name + " sold "
+                              + std::to_string(number) + "house"
+                              + (number == 1 ? "" : "s") + " from ";
+    for (const unsigned id : ids) description += game.properties[id].name + ", ";
+    description.pop_back();
+    description.pop_back();
+
+    return {true, std::move(description)};
 }
 
 Result pay_repairs(Game& game, unsigned player_id, int cost_per_house, int cost_per_hotel)
@@ -528,7 +558,9 @@ Result pay_repairs(Game& game, unsigned player_id, int cost_per_house, int cost_
                       });
     game.player(player_id).cash -= amount_to_pay;
 
-    return true;
+    return {true,
+            game.player(player_id).name + " payed £"
+                + std::to_string(amount_to_pay) + " in building repairs"};
 }
 
 Result pay_to_bank(Game& game, unsigned player_id, int amount)
@@ -538,7 +570,9 @@ Result pay_to_bank(Game& game, unsigned player_id, int amount)
 
     game.player(player_id).cash -= amount;
 
-    return true;
+    return {true,
+            game.player(player_id).name + " payed £" + std::to_string(amount)
+                + " to the bank"};
 }
 
 Result pay_to_player(Game& game, unsigned player_id, int amount)
@@ -548,7 +582,9 @@ Result pay_to_player(Game& game, unsigned player_id, int amount)
 
     game.player(player_id).cash += amount;
 
-    return true;
+    return {true,
+            "The bank payed out £" + std::to_string(amount) + " to "
+                + game.player(player_id).name};
 }
 
 Result transfer(Game& game, unsigned from_player_id, unsigned to_player_id, int amount,
@@ -570,7 +606,9 @@ Result transfer(Game& game, unsigned from_player_id, unsigned to_player_id, int 
         p.owner_id = to_player_id;
     });
 
-    return true;
+    return {true,
+            game.player(from_player_id).name + " made a transfer to "
+                + game.player(to_player_id).name};
 }
 
 Result take_out_secured_debt(Game& game, unsigned player_id, int amount)
@@ -581,7 +619,9 @@ Result take_out_secured_debt(Game& game, unsigned player_id, int amount)
     game.player(player_id).secured_debt += amount;
     game.player(player_id).cash += amount;
 
-    return true;
+    return {true,
+            game.player(player_id).name + " took out £"
+                + std::to_string(amount) + " of secured debt"};
 }
 
 Result take_out_unsecured_debt(Game& game, unsigned player_id, int amount)
@@ -592,7 +632,9 @@ Result take_out_unsecured_debt(Game& game, unsigned player_id, int amount)
     game.player(player_id).unsecured_debt += amount;
     game.player(player_id).cash += amount;
 
-    return true;
+    return {true,
+            game.player(player_id).name + " took out £"
+                + std::to_string(amount) + " of unsecured debt"};
 }
 
 Result pay_off_secured_debt(Game& game, unsigned player_id, int amount)
@@ -603,7 +645,9 @@ Result pay_off_secured_debt(Game& game, unsigned player_id, int amount)
     game.player(player_id).secured_debt -= amount;
     game.player(player_id).cash -= amount;
 
-    return true;
+    return {true,
+            game.player(player_id).name + " payed off £"
+                + std::to_string(amount) + " of secured debt"};
 }
 
 Result pay_off_unsecured_debt(Game& game, unsigned player_id, int amount)
@@ -614,7 +658,9 @@ Result pay_off_unsecured_debt(Game& game, unsigned player_id, int amount)
     game.player(player_id).unsecured_debt -= amount;
     game.player(player_id).cash -= amount;
 
-    return true;
+    return {true,
+            game.player(player_id).name + " payed off £"
+                + std::to_string(amount) + " of unsecured debt"};
 }
 
 Result concede_to_player(Game& game, unsigned loser, unsigned victor)
@@ -622,13 +668,13 @@ Result concede_to_player(Game& game, unsigned loser, unsigned victor)
     const auto result = can_concede_to_player(game, loser, victor);
     if (!result) return result;
 
-    const auto res =
-        transfer(game, loser, victor, game.player(loser).cash, game.player(loser).properties);
+    transfer(game, loser, victor, game.player(loser).cash, game.player(loser).properties);
 
     // Don't erase player, just leave them there, otherwise all player ids are invalidated
-    //game.players.erase(game.players.begin() + loser);
 
-    return res;
+    return {true,
+            game.player(loser).name + " went bankrupt, "
+                + game.player(victor).name + " has taken all assets"};
 }
 
 Result concede_to_bank(Game& game, unsigned player_id)
@@ -639,6 +685,8 @@ Result concede_to_bank(Game& game, unsigned player_id)
     game.player(player_id).cash = 0;
     game.player(player_id).properties = 0;
 
-    return true;
+    return {true,
+            game.player(player_id).name
+                + " went bankrupt, the bank has taken all assets"};
 }
 
