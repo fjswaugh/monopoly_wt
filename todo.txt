@@ -1,0 +1,7 @@
+Add a separate login and game page
+Logout and disconnect people when the browser window closes
+Note: if everyone leaves the GameServer, then the game (and GameServer) should NOT be destroyed.
+Figure out a way of killing the GameServer if the banker wants to
+Make rules file and update with bankruptcy rules
+Allow the banker to add players to the game
+Change property type so that it stores an owner index rather than a pointer to its owner
