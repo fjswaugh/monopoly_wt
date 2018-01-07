@@ -82,9 +82,9 @@ Result GameServer::apply(const GameEvent& event)
 
 void GameServer::post(const Event& event)
 {
-    log("[Game " + name_ + "] " + event.description());
-
     std::unique_lock<std::recursive_mutex> lock(mutex_);
+
+    log("[Game " + name_ + "] " + event.description());
 
     Wt::WApplication* app = Wt::WApplication::instance();
 
