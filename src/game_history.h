@@ -67,10 +67,11 @@ struct GameHistory {
     Result redo() noexcept {
         if (future_games_ == 0) return {false, "Cannot redo here"};
 
-        auto description = "Redo: " + descriptions_[current_game_index_];
         current_game_index_ = (current_game_index_ + 1) % games_stored;
         ++past_games_;
         --future_games_;
+
+        auto description = "Redo: " + descriptions_[current_game_index_];
         return {true, std::move(description)};
     }
 private:
