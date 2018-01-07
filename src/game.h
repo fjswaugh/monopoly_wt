@@ -80,9 +80,12 @@ private:
 };
 
 struct Game {
-    Game(std::vector<Player> players = {}) : players{std::move(players)} {
+    Game(std::vector<Player> players = {}) : players_{std::move(players)} {
         for (unsigned i = 0; i < 28; ++i) {
             property_map_[properties[i].name] = i;
+        }
+        for (unsigned i = 0; i < players_.size(); ++i) {
+            player_map_[players_[i].name] = i;
         }
     }
 
@@ -108,13 +111,32 @@ struct Game {
         return unsecured_interest_;
     }
 
+    const Player& player(unsigned player_id) const noexcept { return players_[player_id]; }
+    Player& player(unsigned player_id) noexcept { return players_[player_id]; }
+    unsigned num_players() const noexcept { return players_.size(); }
+    const std::vector<Player>& players() const noexcept { return players_; }
+
+    void add_player(const Player& player) {
+        player_map_[player.name] = players_.size();
+        players_.push_back(player);
+    }
+    void add_player(Player&& player) {
+        player_map_[player.name] = players_.size();
+        players_.push_back(std::move(player));
+    }
+
+    unsigned id_of_player(const std::string& name) const {
+        auto it = player_map_.find(name);
+        assert(it != player_map_.end());
+        return it->second;
+    }
+
     unsigned id_of_property(const std::string& name) const {
         auto it = property_map_.find(name);
         assert(it != property_map_.end());
         return it->second;
     }
 
-    std::vector<Player> players;
     std::array<Property, 28> properties = {{
         {"Old Kent Road",    60, 50, PropertySet::brown, {2, 10, 30, 90,  160, 250}},
         {"Whitechapel Road", 60, 50, PropertySet::brown, {4, 20, 60, 180, 360, 450}},
@@ -157,10 +179,12 @@ struct Game {
     }};
     double ppi = 1.0;
 private:
+    std::vector<Player> players_;
     int secured_interest_ = 5;
     int unsecured_interest_ = 25;
 
     std::unordered_map<std::string, unsigned> property_map_;
+    std::unordered_map<std::string, unsigned> player_map_;
 };
 
 inline double update_ppi(double old_ppi, int bought_for, int guide_price) noexcept

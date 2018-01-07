@@ -59,7 +59,7 @@ namespace {
     }
 
     std::string name_from_id(std::optional<unsigned> player_id, const Game& game) {
-        if (player_id) return game.players[*player_id].name;
+        if (player_id) return game.player(*player_id).name;
         return "Anonymous";
     }
 }
@@ -91,7 +91,7 @@ MessageWidget::MessageWidget(GameServer& server, std::optional<unsigned> player_
     const std::string welcome_message = [this, player_id, banker] {
         std::string txt
             = "Welcome "s + (banker ? "Banker " : "")
-              + (player_id ? server_.game().players[*player_id].name : ""s);
+              + (player_id ? server_.game().player(*player_id).name : ""s);
         if (txt == "Welcome ") txt += "casual observer";
         return txt;
     }();
@@ -127,7 +127,7 @@ InfoWidget::InfoWidget(GameServer& server)
     player_table_->elementAt(0, 4)->addWidget(std::make_unique<Wt::WText>("Secured debt"));
     player_table_->elementAt(0, 5)->addWidget(std::make_unique<Wt::WText>("Unsecured debt"));
     player_table_->elementAt(0, 6)->addWidget(std::make_unique<Wt::WText>("Interest to pay"));
-    for (unsigned player_id = 0; player_id < server_.game().players.size(); ++player_id) {
+    for (unsigned player_id = 0; player_id < server_.game().num_players(); ++player_id) {
         this->add_player(player_id);
     }
 
@@ -157,9 +157,9 @@ void InfoWidget::update()
     ppi_->setText("PPI: " + std::to_string(server_.game().ppi));
 
     // Player information
-    assert(player_info_.size() <= game.players.size());
+    assert(player_info_.size() <= game.num_players());
     for (unsigned player_id = 0; player_id < player_info_.size(); ++player_id) {
-        const auto& player = game.players[player_id];
+        const auto& player = game.player(player_id);
         player_info_[player_id][0]->setText(player.name);
         player_info_[player_id][1]->setText(std::to_string(player.cash));
         player_info_[player_id][2]->setText(std::to_string(asset_value(player, game)));
@@ -178,7 +178,7 @@ PlayerWidget::PlayerWidget(GameServer& server, unsigned player_id)
     : server_{server}, player_id_{player_id}
 {
     const auto& game = server_.game();
-    const auto& player = game.players[player_id_];
+    const auto& player = game.player(player_id_);
 
     { // Buy property
         buy_combobox_ = this->addWidget(std::make_unique<Wt::WComboBox>());
@@ -221,7 +221,7 @@ PlayerWidget::PlayerWidget(GameServer& server, unsigned player_id)
                 const auto function = [=](Game& g) {
                     return sell_property(g, player_id_, property_id);
                 };
-                const auto message = server_.game().players[player_id_].name + " sold " +
+                const auto message = server_.game().player(player_id_).name + " sold " +
                                      server_.game().properties[property_id].name + " to the bank";
 
                 const GameEvent event{message, function};
@@ -241,7 +241,7 @@ PlayerWidget::PlayerWidget(GameServer& server, unsigned player_id)
                 const auto function = [=](Game& g) {
                     return mortgage(g, player_id_, property_id);
                 };
-                const auto message = server_.game().players[player_id_].name + " mortgaged " +
+                const auto message = server_.game().player(player_id_).name + " mortgaged " +
                                      server_.game().properties[property_id].name;
 
                 const GameEvent event{message, function};
@@ -261,7 +261,7 @@ PlayerWidget::PlayerWidget(GameServer& server, unsigned player_id)
                 const auto function = [=](Game& g) {
                     return unmortgage(g, player_id_, property_id);
                 };
-                const auto message = server_.game().players[player_id_].name + " unmortgaged " +
+                const auto message = server_.game().player(player_id_).name + " unmortgaged " +
                                      server_.game().properties[property_id].name;
 
                 const GameEvent event{message, function};
@@ -296,9 +296,9 @@ PlayerWidget::PlayerWidget(GameServer& server, unsigned player_id)
             const auto function = [=](Game& g) {
                 return transfer(g, from_player_id, to_player_id, amount, properties);
             };
-            const auto message = server_.game().players[from_player_id].name +
+            const auto message = server_.game().player(from_player_id).name +
                                  " made a transfer to " +
-                                 server_.game().players[to_player_id].name;
+                                 server_.game().player(to_player_id).name;
 
             const GameEvent event{message, function};
             attempt_to_send(event, server_, this);
@@ -318,7 +318,7 @@ PlayerWidget::PlayerWidget(GameServer& server, unsigned player_id)
             if (!is_positive_int(amount_str)) return;
 
             const int amount = std::stoi(amount_str);
-            const auto& player = server_.game().players[player_id_];
+            const auto& player = server_.game().player(player_id_);
 
             const GameEvent event{player.name + " payed " + amount_str + " to the bank",
                                   [=](Game& g) { return pay_to_bank(g, player_id_, amount); }};
@@ -360,7 +360,7 @@ PlayerWidget::PlayerWidget(GameServer& server, unsigned player_id)
             const auto unsecured_function = [=](Game& g) {
                 return take_out_unsecured_debt(g, player_id_, amount);
             };
-            const auto message = server_.game().players[player_id_].name + " took out £" +
+            const auto message = server_.game().player(player_id_).name + " took out £" +
                                  amount_str + " of " + (secured ? "" : "un") + "secured debt";
 
             const GameEvent event = secured ? GameEvent{message, secured_function}
@@ -397,7 +397,7 @@ PlayerWidget::PlayerWidget(GameServer& server, unsigned player_id)
             const auto unsecured_function = [=](Game& g) {
                 return pay_off_unsecured_debt(g, player_id_, amount);
             };
-            const auto message = server_.game().players[player_id_].name + " payed off £" +
+            const auto message = server_.game().player(player_id_).name + " payed off £" +
                                  amount_str + " of " + (secured ? "" : "un") + "secured debt";
 
             const GameEvent event = secured ? GameEvent{message, secured_function}
@@ -416,7 +416,7 @@ PlayerWidget::PlayerWidget(GameServer& server, unsigned player_id)
 
         const auto pass_go_function = [this] {
             const auto& game = server_.game();
-            const auto& player = game.players[player_id_];
+            const auto& player = game.player(player_id_);
             const GameEvent event{player.name + " passed go",
                                   [=](Game& g) { return passgo(g, player_id_); }};
             attempt_to_send(event, server_, this);
@@ -430,7 +430,7 @@ PlayerWidget::PlayerWidget(GameServer& server, unsigned player_id)
 void PlayerWidget::update()
 {
     const auto& game = server_.game();
-    const auto& player = game.players[player_id_];
+    const auto& player = game.player(player_id_);
 
     // Property selector/display
     const auto& all_properties = server_.game().properties;
@@ -453,7 +453,7 @@ void PlayerWidget::update()
 
     // Players combobox
     players_combobox_->clear();
-    for (const auto& player : server_.game().players) {
+    for (const auto& player : server_.game().players()) {
         players_combobox_->addItem(player.name);
     }
 }

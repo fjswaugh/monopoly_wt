@@ -80,21 +80,21 @@ int max_unsecured_debt(const Player&, const Game&) noexcept {
 // Checking functions ---------------------------------------------------------
 
 #define CHECK_PLAYER_OWNS_PROPERTY(player_id, property_id)\
-    if (game.properties[property_id].owner != &game.players[player_id]) {\
+    if (game.properties[property_id].owner != &game.player(player_id)) {\
         return {false, "Property is not owned by player_id"};\
     }\
 \
-    assert(game.players[player_id].properties[property_id] == true)
+    assert(game.player(player_id).properties[property_id] == true)
 
 #define CHECK_PLAYER_ID_IN_RANGE(player_id)\
-    assert(player_id < game.players.size())
+    assert(player_id < game.num_players())
 
 #define CHECK_PROPERTY_ID_IN_RANGE(property_id)\
     assert(property_id < 28);
 
 #define CHECK_PLAYER_HAS_CASH(player_id, amount)\
-    if (amount > game.players[player_id].cash) {\
-        return {false, game.players[player_id].name + " doesn't have enough cash"};\
+    if (amount > game.player(player_id).cash) {\
+        return {false, game.player(player_id).name + " doesn't have enough cash"};\
     }
 
 Result can_raise_interest(const Game&)
@@ -111,8 +111,8 @@ Result can_passgo(const Game& game, unsigned player_id)
 {
     CHECK_PLAYER_ID_IN_RANGE(player_id);
 
-    if (game.players[player_id].cash + game.players[player_id].salary <
-        interest_to_pay(game.players[player_id], game)) {
+    if (game.player(player_id).cash + game.player(player_id).salary <
+        interest_to_pay(game.player(player_id), game)) {
         return {false, "Not enough funds to pay interest"};
     }
 
@@ -188,8 +188,8 @@ Result can_build_houses(const Game& game, unsigned player_id, PropertySet set, i
         return {false, "Can't build on utilities"};
     }
 
-    if ((game.players[player_id].properties & set) != set) {
-        return {false, game.players[player_id].name + " doesn't own all properties in set"};
+    if ((game.player(player_id).properties & set) != set) {
+        return {false, game.player(player_id).name + " doesn't own all properties in set"};
     }
 
     const int house_price = game.properties[property_id(set)].house_price;
@@ -212,8 +212,8 @@ Result can_sell_houses(const Game& game, unsigned player_id, PropertySet set, in
     CHECK_PLAYER_ID_IN_RANGE(player_id);
     assert(number >= 0);
 
-    if ((game.players[player_id].properties & set) != set) {
-        return {false, game.players[player_id].name + " doesn't own all properties in set"};
+    if ((game.player(player_id).properties & set) != set) {
+        return {false, game.player(player_id).name + " doesn't own all properties in set"};
     }
 
     int houses_sum = 0;
@@ -232,7 +232,7 @@ Result can_pay_repairs(const Game& game, unsigned player_id, int cost_per_house,
     assert(cost_per_hotel >= 0);
 
     int amount_to_pay = 0;
-    for_each_property(game.players[player_id].properties, game,
+    for_each_property(game.player(player_id).properties, game,
                       [&amount_to_pay, cost_per_house, cost_per_hotel](const Property& p) {
                           if (p.houses == 5) {
                               amount_to_pay += cost_per_house;
@@ -268,8 +268,8 @@ Result can_transfer(const Game& game, unsigned from_player_id, unsigned to_playe
     CHECK_PLAYER_ID_IN_RANGE(to_player_id);
     assert(amount >= 0);
     
-    if ((game.players[from_player_id].properties & properties) != properties) {
-        return {false, game.players[from_player_id].name + " doesn't own all of those properties"};
+    if ((game.player(from_player_id).properties & properties) != properties) {
+        return {false, game.player(from_player_id).name + " doesn't own all of those properties"};
     }
 
     bool houses_on_properties = false;
@@ -290,9 +290,9 @@ Result can_take_out_secured_debt(const Game& game, unsigned player_id, int amoun
     CHECK_PLAYER_ID_IN_RANGE(player_id);
     assert(amount >= 0);
 
-    if (game.players[player_id].secured_debt + amount >
-        max_secured_debt(game.players[player_id], game)) {
-        return {false, game.players[player_id].name + " cannot take out that much secured debt"};
+    if (game.player(player_id).secured_debt + amount >
+        max_secured_debt(game.player(player_id), game)) {
+        return {false, game.player(player_id).name + " cannot take out that much secured debt"};
     }
 
     return true;
@@ -303,9 +303,9 @@ Result can_take_out_unsecured_debt(const Game& game, unsigned player_id, int amo
     CHECK_PLAYER_ID_IN_RANGE(player_id);
     assert(amount >= 0);
 
-    if (game.players[player_id].unsecured_debt + amount >
-        max_unsecured_debt(game.players[player_id], game)) {
-        return {false, game.players[player_id].name + " cannot take out that much unsecured debt"};
+    if (game.player(player_id).unsecured_debt + amount >
+        max_unsecured_debt(game.player(player_id), game)) {
+        return {false, game.player(player_id).name + " cannot take out that much unsecured debt"};
     }
 
     return true;
@@ -316,7 +316,7 @@ Result can_pay_off_secured_debt(const Game& game, unsigned player_id, int amount
     CHECK_PLAYER_ID_IN_RANGE(player_id);
     assert(amount >= 0);
 
-    if (game.players[player_id].secured_debt < amount) {
+    if (game.player(player_id).secured_debt < amount) {
         return {false, "Cannot overpay debt"};
     }
 
@@ -330,7 +330,7 @@ Result can_pay_off_unsecured_debt(const Game& game, unsigned player_id, int amou
     CHECK_PLAYER_ID_IN_RANGE(player_id);
     assert(amount >= 0);
 
-    if (game.players[player_id].unsecured_debt < amount) {
+    if (game.player(player_id).unsecured_debt < amount) {
         return {false, "Cannot overpay debt"};
     }
 
@@ -345,7 +345,7 @@ Result can_concede_to_player(const Game& game, unsigned loser, unsigned victor)
     CHECK_PLAYER_ID_IN_RANGE(victor);
 
     bool houses_on_properties = false;
-    for_each_property(game.players[loser].properties, game,
+    for_each_property(game.player(loser).properties, game,
                       [&houses_on_properties](const Property& p) {
                           if (p.houses > 0) houses_on_properties = true;
                       });
@@ -391,8 +391,8 @@ Result passgo(Game& game, unsigned player_id)
     const auto result = can_passgo(game, player_id);
     if (!result) return result;
 
-    game.players[player_id].cash += game.players[player_id].salary;
-    game.players[player_id].cash -= interest_to_pay(game.players[player_id], game);
+    game.player(player_id).cash += game.player(player_id).salary;
+    game.player(player_id).cash -= interest_to_pay(game.player(player_id), game);
 
     return true;
 }
@@ -402,10 +402,10 @@ Result buy_property(Game& game, unsigned player_id, unsigned property_id, int pr
     const auto result = can_buy_property(game, player_id, property_id, price);
     if (!result) return result;
 
-    game.properties[property_id].owner = &game.players[player_id];
-    game.players[player_id].properties[property_id] = true;
+    game.properties[property_id].owner = &game.player(player_id);
+    game.player(player_id).properties[property_id] = true;
 
-    game.players[player_id].cash -= price;
+    game.player(player_id).cash -= price;
 
     game.ppi = update_ppi(game.ppi, price, game.properties[property_id].guide_price);
 
@@ -418,10 +418,10 @@ Result sell_property(Game& game, unsigned player_id, unsigned property_id)
     if (!result) return result;
 
     game.properties[property_id].owner = nullptr;
-    game.players[player_id].properties[property_id] = false;
+    game.player(player_id).properties[property_id] = false;
 
     const int price = game.ppi * game.properties[property_id].guide_price;
-    game.players[player_id].cash += price;
+    game.player(player_id).cash += price;
 
     return true;
 }
@@ -431,7 +431,7 @@ Result mortgage(Game& game, unsigned player_id, unsigned property_id)
     const auto result = can_mortgage(game, player_id, property_id);
     if (!result) return result;
 
-    auto& player = game.players[player_id];
+    auto& player = game.player(player_id);
     auto& property = game.properties[property_id];
 
     const int amount = property.guide_price * game.ppi / 2.0;
@@ -446,7 +446,7 @@ Result unmortgage(Game& game, unsigned player_id, unsigned property_id)
     const auto result = can_unmortgage(game, player_id, property_id);
     if (!result) return result;
 
-    auto& player = game.players[player_id];
+    auto& player = game.player(player_id);
     auto& property = game.properties[property_id];
 
     player.cash -= property.mortgage_amount() * 1.1;
@@ -460,7 +460,7 @@ Result build_houses(Game& game, unsigned player_id, PropertySet set, int number)
     const auto result = can_build_houses(game, player_id, set, number);
     if (!result) return result;
 
-    auto& player = game.players[player_id];
+    auto& player = game.player(player_id);
     const int house_price = game.properties[property_id(set)].house_price;
 
     player.cash -= number * house_price;
@@ -489,7 +489,7 @@ Result sell_houses(Game& game, unsigned player_id, PropertySet set, int number)
     const auto result = can_sell_houses(game, player_id, set, number);
     if (!result) return result;
 
-    auto& player = game.players[player_id];
+    auto& player = game.player(player_id);
     const int house_price = game.properties[property_id(set)].house_price;
 
     player.cash += (number * house_price) / 2;
@@ -517,7 +517,7 @@ Result pay_repairs(Game& game, unsigned player_id, int cost_per_house, int cost_
     if (!result) return result;
 
     int amount_to_pay = 0;
-    for_each_property(game.players[player_id].properties, game,
+    for_each_property(game.player(player_id).properties, game,
                       [&amount_to_pay, cost_per_house, cost_per_hotel](const Property& p) {
                           if (p.houses == 5) {
                               amount_to_pay += cost_per_house;
@@ -525,7 +525,7 @@ Result pay_repairs(Game& game, unsigned player_id, int cost_per_house, int cost_
                               amount_to_pay += (p.houses * cost_per_house);
                           }
                       });
-    game.players[player_id].cash -= amount_to_pay;
+    game.player(player_id).cash -= amount_to_pay;
 
     return true;
 }
@@ -535,7 +535,7 @@ Result pay_to_bank(Game& game, unsigned player_id, int amount)
     const auto result = can_pay_to_bank(game, player_id, amount);
     if (!result) return result;
 
-    game.players[player_id].cash -= amount;
+    game.player(player_id).cash -= amount;
 
     return true;
 }
@@ -545,7 +545,7 @@ Result pay_to_player(Game& game, unsigned player_id, int amount)
     const auto result = can_pay_to_player(game, player_id, amount);
     if (!result) return result;
 
-    game.players[player_id].cash += amount;
+    game.player(player_id).cash += amount;
 
     return true;
 }
@@ -556,8 +556,8 @@ Result transfer(Game& game, unsigned from_player_id, unsigned to_player_id, int 
     const auto result = can_transfer(game, from_player_id, to_player_id, amount, properties);
     if (!result) return result;
 
-    auto& from_player = game.players[from_player_id];
-    auto& to_player = game.players[to_player_id];
+    auto& from_player = game.player(from_player_id);
+    auto& to_player = game.player(to_player_id);
 
     from_player.cash -= amount;
     to_player.cash += amount;
@@ -575,8 +575,8 @@ Result take_out_secured_debt(Game& game, unsigned player_id, int amount)
     const auto result = can_take_out_secured_debt(game, player_id, amount);
     if (!result) return result;
 
-    game.players[player_id].secured_debt += amount;
-    game.players[player_id].cash += amount;
+    game.player(player_id).secured_debt += amount;
+    game.player(player_id).cash += amount;
 
     return true;
 }
@@ -586,8 +586,8 @@ Result take_out_unsecured_debt(Game& game, unsigned player_id, int amount)
     const auto result = can_take_out_unsecured_debt(game, player_id, amount);
     if (!result) return result;
 
-    game.players[player_id].unsecured_debt += amount;
-    game.players[player_id].cash += amount;
+    game.player(player_id).unsecured_debt += amount;
+    game.player(player_id).cash += amount;
 
     return true;
 }
@@ -597,8 +597,8 @@ Result pay_off_secured_debt(Game& game, unsigned player_id, int amount)
     const auto result = can_pay_off_secured_debt(game, player_id, amount);
     if (!result) return result;
 
-    game.players[player_id].secured_debt -= amount;
-    game.players[player_id].cash -= amount;
+    game.player(player_id).secured_debt -= amount;
+    game.player(player_id).cash -= amount;
 
     return true;
 }
@@ -608,8 +608,8 @@ Result pay_off_unsecured_debt(Game& game, unsigned player_id, int amount)
     const auto result = can_pay_off_unsecured_debt(game, player_id, amount);
     if (!result) return result;
 
-    game.players[player_id].unsecured_debt -= amount;
-    game.players[player_id].cash -= amount;
+    game.player(player_id).unsecured_debt -= amount;
+    game.player(player_id).cash -= amount;
 
     return true;
 }
@@ -620,7 +620,7 @@ Result concede_to_player(Game& game, unsigned loser, unsigned victor)
     if (!result) return result;
 
     const auto res =
-        transfer(game, loser, victor, game.players[loser].cash, game.players[loser].properties);
+        transfer(game, loser, victor, game.player(loser).cash, game.player(loser).properties);
 
     // Don't erase player, just leave them there, otherwise all player ids are invalidated
     //game.players.erase(game.players.begin() + loser);
@@ -633,8 +633,8 @@ Result concede_to_bank(Game& game, unsigned player_id)
     const auto result = can_concede_to_bank(game, player_id);
     if (!result) return result;
 
-    game.players[player_id].cash = 0;
-    game.players[player_id].properties = 0;
+    game.player(player_id).cash = 0;
+    game.player(player_id).properties = 0;
 
     return true;
 }
