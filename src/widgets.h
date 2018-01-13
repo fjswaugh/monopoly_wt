@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Wt/WContainerWidget.h>
+#include <Wt/WGroupBox.h>
 #include <Wt/WButtonGroup.h>
 #include <Wt/WLineEdit.h>
 #include <Wt/WText.h>
@@ -24,6 +25,48 @@ struct NotificationEvent;
 struct GameWidget;
 struct GameEvent;
 
+bool is_positive_int(const std::string&);
+
+template <typename T>
+std::optional<T> get(const Wt::WLineEdit* const input_box)
+{
+    if (!input_box) return {};
+
+    if constexpr (std::is_same_v<T, int>) {
+        const std::string s = input_box->text().narrow();
+        if (!is_positive_int(s)) return {};
+        return std::stoi(s);
+    } else if constexpr (std::is_same_v<T, std::string>) {
+        return input_box->text().narrow();
+    }
+}
+
+template <typename InputType>
+struct InputWidget : Wt::WGroupBox {
+    InputWidget(std::string title, std::string button_text)
+    {
+        this->setTitle(title);
+        input_box_ = this->addWidget(std::make_unique<Wt::WLineEdit>());
+        button_ = this->addWidget(std::make_unique<Wt::WPushButton>(button_text));
+    }
+
+    template <typename F_of_InputType>
+    void connect(F_of_InputType&& callback)
+    {
+        const auto function = [&callback, this] {
+            auto i = get<InputType>(input_box_);
+            input_box_->setText("");
+            if (i) callback(*i);
+        };
+
+        button_->mouseWentDown().connect(function);
+        input_box_->enterPressed().connect(function);
+    }
+private:
+    Wt::WPushButton* button_ = nullptr;
+    Wt::WLineEdit* input_box_ = nullptr;
+};
+
 // Widget that displays a log of messages and lets users send messages
 struct MessageWidget : Wt::WContainerWidget {
     MessageWidget(GameServer&, std::optional<unsigned> player_id, bool banker);
@@ -32,6 +75,7 @@ struct MessageWidget : Wt::WContainerWidget {
 private:
     Wt::WLineEdit* input_box_ = nullptr;
     Wt::WPushButton* send_message_button_ = nullptr;
+
     Wt::WContainerWidget* messages_ = nullptr;
 
     GameServer& server_;
@@ -106,8 +150,11 @@ private:
     Wt::WPushButton* sell_houses_button_ = nullptr;
     // Pay repairs
 
+    InputWidget<int>* pay_to_bank_ = nullptr;
+    /*
     Wt::WLineEdit* amount_to_pay_ = nullptr;
     Wt::WPushButton* pay_to_bank_ = nullptr;
+    */
 
     Wt::WLineEdit* amount_to_receive_ = nullptr;
     Wt::WPushButton* receive_from_bank_ = nullptr;

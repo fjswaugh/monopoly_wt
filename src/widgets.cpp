@@ -11,6 +11,12 @@
 
 using namespace std::literals;
 
+bool is_positive_int(const std::string& s)
+{
+    return !s.empty() &&
+           std::find_if(s.begin(), s.end(), [](char c) { return !std::isdigit(c); }) == s.end();
+}
+
 namespace {
 
 void attempt_to_send(const UndoEvent& event, GameServer& server, Wt::WContainerWidget* widget)
@@ -58,12 +64,6 @@ void attempt_to_send(const GameEvent& event, GameServer& server, Wt::WContainerW
             popup->show.exec();
         }
     }
-}
-
-bool is_positive_int(const std::string& s)
-{
-    return !s.empty() &&
-           std::find_if(s.begin(), s.end(), [](char c) { return !std::isdigit(c); }) == s.end();
 }
 
 // Returns -1 if it can't retrieve a positive int
@@ -385,6 +385,15 @@ PlayerWidget::PlayerWidget(GameServer& server, unsigned player_id)
     this->addWidget(std::make_unique<Wt::WBreak>());
 
     { // Pay to bank
+        pay_to_bank_ = this->addWidget(
+            std::make_unique<InputWidget<int>>("Pay to bank", "Pay"));
+        pay_to_bank_->connect([this](int amount) {
+            const GameEvent event{
+                [=](Game& g) { return pay_to_bank(g, player_id_, amount); }};
+            attempt_to_send(event, server_, this);
+        });
+
+        /*
         amount_to_pay_ = this->addWidget(std::make_unique<Wt::WLineEdit>());
         pay_to_bank_ = this->addWidget(std::make_unique<Wt::WPushButton>("Pay to bank"));
 
@@ -399,6 +408,7 @@ PlayerWidget::PlayerWidget(GameServer& server, unsigned player_id)
 
         pay_to_bank_->mouseWentDown().connect(pay_to_bank_function);
         amount_to_pay_->enterPressed().connect(pay_to_bank_function);
+        */
     }
 
     { // Receive from bank
