@@ -80,14 +80,7 @@ private:
 };
 
 struct Game {
-    Game(std::vector<Player> players = {}) : players_{std::move(players)} {
-        for (unsigned i = 0; i < 28; ++i) {
-            property_map_[properties[i].name] = i;
-        }
-        for (unsigned i = 0; i < players_.size(); ++i) {
-            player_map_[players_[i].name] = i;
-        }
-    }
+    Game(std::vector<Player> players = {}) : players_(std::move(players)) {}
 
     Game(const Game&) = default;
     Game& operator=(const Game&) = default;
@@ -117,64 +110,64 @@ struct Game {
     const std::vector<Player>& players() const noexcept { return players_; }
 
     void add_player(const Player& player) {
-        player_map_[player.name] = players_.size();
         players_.push_back(player);
     }
     void add_player(Player&& player) {
-        player_map_[player.name] = players_.size();
         players_.push_back(std::move(player));
     }
 
-    unsigned id_of_player(const std::string& name) const {
-        auto it = player_map_.find(name);
-        assert(it != player_map_.end());
-        return it->second;
+    unsigned id_of_player(const std::string& name) const noexcept {
+        const auto it = std::find_if(begin(players_), end(players_),
+                                     [&name](const Player& p) { return p.name == name; });
+        assert(it != end(players_));
+        return std::distance(begin(players_), it);
     }
 
-    unsigned id_of_property(const std::string& name) const {
-        auto it = property_map_.find(name);
-        assert(it != property_map_.end());
-        return it->second;
+    unsigned id_of_property(const std::string& name) const noexcept {
+        const auto it = std::find_if(begin(properties), end(properties),
+                                     [&name](const Property& p) { return p.name == name; });
+        assert(it != end(properties));
+        return std::distance(begin(properties), it);
     }
 
     std::array<Property, 28> properties = {{
-        {"Old Kent Road",    60, 50, PropertySet::brown, {2, 10, 30, 90,  160, 250}},
-        {"Whitechapel Road", 60, 50, PropertySet::brown, {4, 20, 60, 180, 360, 450}},
+        {"Old Kent Road",         60,  50,  PropertySet::brown,   {{2,  10, 30,  90,  160, 250}}},
+        {"Whitechapel Road",      60,  50,  PropertySet::brown,   {{4,  20, 60,  180, 360, 450}}},
 
-        {"The Angel Islington", 100, 50, PropertySet::lblue, {6, 30, 90,  270, 400, 550}},
-        {"Euston Road",         100, 50, PropertySet::lblue, {6, 30, 90,  270, 400, 550}},
-        {"Pentonville Road",    120, 50, PropertySet::lblue, {8, 40, 100, 300, 450, 600}},
+        {"The Angel Islington",   100, 50,  PropertySet::lblue,   {{6,  30, 90,  270, 400, 550}}},
+        {"Euston Road",           100, 50,  PropertySet::lblue,   {{6,  30, 90,  270, 400, 550}}},
+        {"Pentonville Road",      120, 50,  PropertySet::lblue,   {{8,  40, 100, 300, 450, 600}}},
 
-        {"Pall Mall",             140, 100, PropertySet::pink, {10, 50, 150, 450, 625, 750}},
-        {"Whitehall",             140, 100, PropertySet::pink, {10, 50, 150, 450, 625, 750}},
-        {"Northumberland Avenue", 160, 100, PropertySet::pink, {12, 60, 180, 500, 700, 900}},
+        {"Pall Mall",             140, 100, PropertySet::pink,    {{10, 50, 150, 450, 625, 750}}},
+        {"Whitehall",             140, 100, PropertySet::pink,    {{10, 50, 150, 450, 625, 750}}},
+        {"Northumberland Avenue", 160, 100, PropertySet::pink,    {{12, 60, 180, 500, 700, 900}}},
 
-        {"Bow Street",         140, 100, PropertySet::orange, {10, 50, 150, 450, 625, 750}},
-        {"Marlborough Street", 140, 100, PropertySet::orange, {10, 50, 150, 450, 625, 750}},
-        {"Vine Street",        160, 100, PropertySet::orange, {12, 60, 180, 500, 700, 900}},
+        {"Bow Street",            140, 100, PropertySet::orange,  {{10, 50, 150, 450, 625, 750}}},
+        {"Marlborough Street",    140, 100, PropertySet::orange,  {{10, 50, 150, 450, 625, 750}}},
+        {"Vine Street",           160, 100, PropertySet::orange,  {{12, 60, 180, 500, 700, 900}}},
 
-        {"Strand",           140, 100, PropertySet::red, {10, 50, 150, 450, 625, 750}},
-        {"Fleet Street",     140, 100, PropertySet::red, {10, 50, 150, 450, 625, 750}},
-        {"Trafalgar Square", 160, 100, PropertySet::red, {12, 60, 180, 500, 700, 900}},
+        {"Strand",                140, 100, PropertySet::red,     {{10, 50, 150, 450, 625, 750}}},
+        {"Fleet Street",          140, 100, PropertySet::red,     {{10, 50, 150, 450, 625, 750}}},
+        {"Trafalgar Square",      160, 100, PropertySet::red,     {{12, 60, 180, 500, 700, 900}}},
 
-        {"Leicester Square", 140, 100, PropertySet::yellow, {10, 50, 150, 450, 625, 750}},
-        {"Coventry Street",  140, 100, PropertySet::yellow, {10, 50, 150, 450, 625, 750}},
-        {"Piccadiliy",       160, 100, PropertySet::yellow, {12, 60, 180, 500, 700, 900}},
+        {"Leicester Square",      140, 100, PropertySet::yellow,  {{10, 50, 150, 450, 625, 750}}},
+        {"Coventry Street",       140, 100, PropertySet::yellow,  {{10, 50, 150, 450, 625, 750}}},
+        {"Piccadiliy",            160, 100, PropertySet::yellow,  {{12, 60, 180, 500, 700, 900}}},
 
-        {"Regent Street", 140, 100, PropertySet::green, {10, 50, 150, 450, 625, 750}},
-        {"Oxford Street", 140, 100, PropertySet::green, {10, 50, 150, 450, 625, 750}},
-        {"Bond Street",   160, 100, PropertySet::green, {12, 60, 180, 500, 700, 900}},
+        {"Regent Street",         140, 100, PropertySet::green,   {{10, 50, 150, 450, 625, 750}}},
+        {"Oxford Street",         140, 100, PropertySet::green,   {{10, 50, 150, 450, 625, 750}}},
+        {"Bond Street",           160, 100, PropertySet::green,   {{12, 60, 180, 500, 700, 900}}},
 
-        {"Park lane", 140, 100, PropertySet::dblue, {10, 50, 150, 450, 625, 750}},
-        {"Mayfair",   160, 100, PropertySet::dblue, {12, 60, 180, 500, 700, 900}},
+        {"Park lane",             140, 100, PropertySet::dblue,   {{10, 50, 150, 450, 625, 750}}},
+        {"Mayfair",               160, 100, PropertySet::dblue,   {{12, 60, 180, 500, 700, 900}}},
 
-        {"Kings Cross Station",   200, 0, PropertySet::station, {25, 50, 100, 200, 0, 0}},
-        {"Marylebone Station",    200, 0, PropertySet::station, {25, 50, 100, 200, 0, 0}},
-        {"Fenchurch St. Station", 200, 0, PropertySet::station, {25, 50, 100, 200, 0, 0}},
-        {"Liverpool St. Station", 200, 0, PropertySet::station, {25, 50, 100, 200, 0, 0}},
+        {"Kings Cross Station",   200, 0,   PropertySet::station, {{25, 50, 100, 200, 0,   0  }}},
+        {"Marylebone Station",    200, 0,   PropertySet::station, {{25, 50, 100, 200, 0,   0  }}},
+        {"Fenchurch St. Station", 200, 0,   PropertySet::station, {{25, 50, 100, 200, 0,   0  }}},
+        {"Liverpool St. Station", 200, 0,   PropertySet::station, {{25, 50, 100, 200, 0,   0  }}},
 
-        {"Electric Company", 150, 0, PropertySet::utility, {10, 50, 150, 450, 625, 750}},
-        {"Water Works",      150, 0, PropertySet::utility, {12, 60, 180, 500, 700, 900}},
+        {"Electric Company",      150, 0,   PropertySet::utility, {{10, 50, 150, 450, 625, 750}}},
+        {"Water Works",           150, 0,   PropertySet::utility, {{12, 60, 180, 500, 700, 900}}},
 
     }};
     double ppi = 1.0;
@@ -182,9 +175,6 @@ private:
     std::vector<Player> players_;
     int secured_interest_ = 5;
     int unsecured_interest_ = 25;
-
-    std::unordered_map<std::string, unsigned> property_map_;
-    std::unordered_map<std::string, unsigned> player_map_;
 };
 
 inline double update_ppi(double old_ppi, int bought_for, int guide_price) noexcept

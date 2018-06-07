@@ -80,22 +80,20 @@ int max_unsecured_debt(const Player&, const Game&) noexcept {
 
 // Checking functions ---------------------------------------------------------
 
-#define CHECK_PLAYER_OWNS_PROPERTY(player_id, property_id)\
-    if (game.properties[property_id].owner_id != player_id) {\
-        return {false, "Property is not owned by player_id"};\
-    }\
-\
+#define CHECK_PLAYER_OWNS_PROPERTY(player_id, property_id)                                        \
+    if (game.properties[property_id].owner_id != player_id) {                                     \
+        return {false, "Property is not owned by player_id"};                                     \
+    }                                                                                             \
+                                                                                                  \
     assert(game.player(player_id).properties[property_id] == true)
 
-#define CHECK_PLAYER_ID_IN_RANGE(player_id)\
-    assert(player_id < game.num_players())
+#define CHECK_PLAYER_ID_IN_RANGE(player_id) assert(player_id < game.num_players())
 
-#define CHECK_PROPERTY_ID_IN_RANGE(property_id)\
-    assert(property_id < 28);
+#define CHECK_PROPERTY_ID_IN_RANGE(property_id) assert(property_id < 28);
 
-#define CHECK_PLAYER_HAS_CASH(player_id, amount)\
-    if (amount > game.player(player_id).cash) {\
-        return {false, game.player(player_id).name + " doesn't have enough cash"};\
+#define CHECK_PLAYER_HAS_CASH(player_id, amount)                                                  \
+    if (amount > game.player(player_id).cash) {                                                   \
+        return {false, game.player(player_id).name + " doesn't have enough cash"};                \
     }
 
 Result can_raise_interest(const Game&)
@@ -248,7 +246,7 @@ Result can_pay_repairs(const Game& game, unsigned player_id, int cost_per_house,
     for_each_property(game.player(player_id).properties, game,
                       [&amount_to_pay, cost_per_house, cost_per_hotel](const Property& p) {
                           if (p.houses == 5) {
-                              amount_to_pay += cost_per_house;
+                              amount_to_pay += cost_per_hotel;
                           } else {
                               amount_to_pay += (p.houses * cost_per_house);
                           }
@@ -563,7 +561,7 @@ Result pay_repairs(Game& game, unsigned player_id, int cost_per_house, int cost_
     for_each_property(game.player(player_id).properties, game,
                       [&amount_to_pay, cost_per_house, cost_per_hotel](const Property& p) {
                           if (p.houses == 5) {
-                              amount_to_pay += cost_per_house;
+                              amount_to_pay += cost_per_hotel;
                           } else {
                               amount_to_pay += (p.houses * cost_per_house);
                           }

@@ -58,7 +58,8 @@ struct GameHistory {
         if (past_games_ == 0) return {false, "Cannot undo here"};
 
         auto description = "Undo: " + descriptions_[current_game_index_];
-        current_game_index_ = (current_game_index_ > 0 ? current_game_index_ - 1 : games_stored - 1);
+        current_game_index_ =
+            (current_game_index_ > 0 ? current_game_index_ - 1 : games_stored - 1);
         --past_games_;
         ++future_games_;
         return {true, std::move(description)};
